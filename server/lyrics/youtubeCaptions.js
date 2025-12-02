@@ -1,8 +1,9 @@
 const { spawn } = require("child_process");
 const path = require("path");
 
-// Use bundled yt-dlp.exe
-const YTDLP = path.join(__dirname, "..", "..", "bin", "yt-dlp.exe");
+// Use bundled yt-dlp binary (works on both Windows and Linux)
+const YTDLP_BINARY = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+const YTDLP = path.join(__dirname, "..", "..", "bin", YTDLP_BINARY);
 
 /**
  * Parse WebVTT timestamp to seconds

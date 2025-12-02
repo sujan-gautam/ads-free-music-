@@ -34,8 +34,10 @@ client/dist/
 client/build/
 
 # Binaries
-bin/
 *.exe
+
+# Allow yt-dlp binary for Linux deployment
+!bin/yt-dlp
 
 # Cache
 cache/

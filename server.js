@@ -25,8 +25,10 @@ const io = require("socket.io")(http, {
 
 const PORT = process.env.PORT || 5000;
 
-// Use bundled yt-dlp.exe from bin directory
-const YTDLP = path.join(__dirname, "bin", "yt-dlp.exe");
+// Use bundled yt-dlp binary (works on both Windows and Linux)
+// On Windows: bin/yt-dlp.exe, On Linux: bin/yt-dlp
+const YTDLP_BINARY = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+const YTDLP = path.join(__dirname, "bin", YTDLP_BINARY);
 
 console.log(`Using yt-dlp from: ${YTDLP}`);
 

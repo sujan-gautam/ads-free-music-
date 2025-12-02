@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "postinstall": "node -e \"if(process.platform!=='win32'){const{execSync}=require('child_process');const fs=require('fs');if(!fs.existsSync('bin')){fs.mkdirSync('bin');}if(!fs.existsSync('bin/yt-dlp')){console.log('Downloading yt-dlp...');try{execSync('curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o bin/yt-dlp && chmod +x bin/yt-dlp',{stdio:'inherit'});}catch(e){console.warn('Failed to download yt-dlp:',e.message);}}}\"",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3001 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "cd client && npm run build && cd .. && electron-builder",
     "package:win": "npm run electron:build -- --win",
