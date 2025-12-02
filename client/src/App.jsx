@@ -19,8 +19,13 @@ import AddToPlaylistModal from './components/AddToPlaylistModal';
 import LyricsView from './components/LyricsView';
 import { useLyrics } from './hooks/useLyrics';
 
-const API_URL = "http://localhost:5000";
-const socket = io(API_URL);
+// Environment-based API configuration
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const socket = io(SOCKET_URL, {
+    withCredentials: true,
+    transports: ['websocket', 'polling']
+});
 
 function App() {
     // -- State --

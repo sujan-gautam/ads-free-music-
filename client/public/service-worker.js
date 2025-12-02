@@ -43,9 +43,12 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
   // Skip API requests (let them go to network)
+  // Check for common API patterns instead of hardcoded URLs
+  const url = new URL(event.request.url);
   if (event.request.url.includes('/api/') || 
-      event.request.url.includes('localhost:5000') ||
-      event.request.url.includes('/stream')) {
+      event.request.url.includes('/stream') ||
+      event.request.url.includes('/socket.io') ||
+      url.port === '5000') {
     return;
   }
 

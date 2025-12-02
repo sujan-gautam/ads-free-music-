@@ -4,7 +4,7 @@ import { Play, TrendingUp, Music, Disc, Radio, Heart, ListPlus, Plus } from 'luc
 import axios from 'axios';
 import { cn } from '../lib/utils';
 
-const API_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const ExploreView = ({
     playTrack,
