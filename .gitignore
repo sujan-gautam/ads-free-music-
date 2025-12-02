@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+*.log
+
+# Electron build outputs
+release/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Client build
+client/dist/
+client/build/
+
+# Binaries
+bin/
+*.exe
+
+# Cache
+cache/
+
+# Flutter
+flutter_music_player/.dart_tool/
+flutter_music_player/.flutter-plugins
+flutter_music_player/.flutter-plugins-dependencies
+flutter_music_player/.packages
+flutter_music_player/build/
+flutter_music_player/ios/Pods/
+flutter_music_player/ios/.symlinks/
+flutter_music_player/ios/Flutter/Flutter.framework
+flutter_music_player/ios/Flutter/Flutter.podspec

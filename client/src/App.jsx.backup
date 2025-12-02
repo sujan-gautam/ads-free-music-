@@ -1,0 +1,449 @@
+import { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000';
+const socket = io(API_URL);
+
+function App() {
+    // State management
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [currentTrack, setCurrentTrack] = useState(null);
+    const [queue, setQueue] = useState([]);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsMuted] = useState(false);
+    const [repeat, setRepeat] = useState(false);
+    const [shuffle, setShuffle] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [activeView, setActiveView] = useState('search'); // 'search' or 'queue'
+
+    const audioRef = useRef(null);
+    const searchTimeoutRef = useRef(null);
+
+    // Socket.IO listeners
+    useEffect(() => {
+        socket.on('progressEventSocket', (data) => {
+            setProgress(data.progress);
+        });
+
+        return () => {
+            socket.off('progressEventSocket');
+        };
+    }, []);
+
+    // Audio event listeners
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+        const handleDurationChange = () => setDuration(audio.duration);
+        const handleEnded = () => handleTrackEnd();
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('durationchange', handleDurationChange);
+        audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+            audio.removeEventListener('durationchange', handleDurationChange);
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+        };
+    }, [queue, repeat, shuffle]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            switch (e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    seek(currentTime + 10);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    seek(currentTime - 10);
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    setVolume(Math.min(1, volume + 0.1));
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    setVolume(Math.max(0, volume - 0.1));
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [currentTime, volume]);
+
+    // Search functionality with debouncing
+    const performSearch = async () => {
+        if (!searchQuery.trim()) return;
+
+        setIsSearching(true);
+        try {
+            const response = await axios.get(`${API_URL}/search?q=${encodeURIComponent(searchQuery)}`);
+            setSearchResults(response.data.results || []);
+            setActiveView('search');
+        } catch (error) {
+            console.error('Search error:', error);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        performSearch();
+    };
+
+    // Auto-search with debounce
+    useEffect(() => {
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+
+        if (searchQuery.trim().length > 2) {
+            searchTimeoutRef.current = setTimeout(() => {
+                performSearch();
+            }, 800);
+        }
+
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, [searchQuery]);
+
+    // Play track
+    const playTrack = async (track) => {
+        setCurrentTrack(track);
+        setProgress(0);
+
+        const streamUrl = `${API_URL}/stream?url=${encodeURIComponent(track.url)}`;
+
+        if (audioRef.current) {
+            audioRef.current.src = streamUrl;
+            audioRef.current.load();
+
+            try {
+                await audioRef.current.play();
+                setIsPlaying(true);
+            } catch (error) {
+                console.error('Playback error:', error);
+            }
+        }
+    };
+
+    const addToQueue = (track) => {
+        setQueue(prev => [...prev, track]);
+    };
+
+    const removeFromQueue = (index) => {
+        setQueue(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const playFromQueue = (index) => {
+        const track = queue[index];
+        playTrack(track);
+        removeFromQueue(index);
+    };
+
+    const handleTrackEnd = () => {
+        if (repeat) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+        } else if (queue.length > 0) {
+            playNext();
+        } else {
+            setIsPlaying(false);
+        }
+    };
+
+    const playNext = () => {
+        if (queue.length === 0) return;
+
+        let nextIndex = 0;
+        if (shuffle) {
+            nextIndex = Math.floor(Math.random() * queue.length);
+        }
+
+        playFromQueue(nextIndex);
+    };
+
+    const togglePlayPause = () => {
+        if (!audioRef.current || !currentTrack) return;
+
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play();
+        }
+    };
+
+    const seek = (time) => {
+        if (!audioRef.current || !duration) return;
+
+        try {
+            const newTime = Math.max(0, Math.min(time, duration));
+            audioRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+        } catch (error) {
+            console.error('Seek error:', error);
+        }
+    };
+
+    const handleProgressClick = (e) => {
+        if (!duration) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const percent = (e.clientX - rect.left) / rect.width;
+        const newTime = percent * duration;
+        seek(newTime);
+    };
+
+    const handleProgressDrag = (e) => {
+        if (e.buttons !== 1) return;
+        handleProgressClick(e);
+    };
+
+    const formatTime = (seconds) => {
+        if (!seconds || isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = isMuted ? 0 : volume;
+        }
+    }, [volume, isMuted]);
+
+    return (
+        <div className="app-container">
+            {/* Sidebar */}
+            <aside className="sidebar">
+                <div className="sidebar-header">
+                    <h1 className="sidebar-logo">🎵 MusicStream</h1>
+                </div>
+
+                <nav className="sidebar-nav">
+                    <button
+                        className={`nav-item ${activeView === 'search' ? 'active' : ''}`}
+                        onClick={() => setActiveView('search')}
+                    >
+                        <span className="nav-icon">🔍</span>
+                        <span>Search</span>
+                    </button>
+                    <button
+                        className={`nav-item ${activeView === 'queue' ? 'active' : ''}`}
+                        onClick={() => setActiveView('queue')}
+                    >
+                        <span className="nav-icon">📋</span>
+                        <span>Queue ({queue.length})</span>
+                    </button>
+                </nav>
+
+                {/* Mini Player in Sidebar */}
+                {currentTrack && (
+                    <div className="sidebar-player">
+                        <img src={currentTrack.thumbnail} alt="" className="sidebar-player-art" />
+                        <div className="sidebar-player-info">
+                            <div className="sidebar-player-title">{currentTrack.title}</div>
+                            <div className="sidebar-player-artist">{currentTrack.uploader}</div>
+                        </div>
+                    </div>
+                )}
+            </aside>
+
+            {/* Main Content */}
+            <main className="main-content">
+                {/* Search View */}
+                {activeView === 'search' && (
+                    <div className="content-section">
+                        <div className="search-header">
+                            <form onSubmit={handleSearch} className="search-form">
+                                <input
+                                    type="text"
+                                    className="search-input"
+                                    placeholder="Search for songs, artists, albums..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                                <button type="submit" className="search-button" disabled={isSearching}>
+                                    {isSearching ? '⏳' : '🔍'}
+                                </button>
+                            </form>
+                        </div>
+
+                        <div className="results-container">
+                            {searchResults.length > 0 ? (
+                                <div className="results-grid">
+                                    {searchResults.map((track, index) => (
+                                        <div key={track.videoId} className="track-card fade-in" style={{ animationDelay: `${index * 0.03}s` }}>
+                                            <div className="track-thumbnail-container">
+                                                <img src={track.thumbnail} alt={track.title} className="track-thumbnail" />
+                                                <div className="track-overlay">
+                                                    <button className="play-overlay-btn" onClick={() => playTrack(track)}>
+                                                        ▶
+                                                    </button>
+                                                </div>
+                                                {track.duration > 0 && (
+                                                    <span className="track-duration">{formatTime(track.duration)}</span>
+                                                )}
+                                            </div>
+                                            <div className="track-info">
+                                                <h3 className="track-title">{track.title}</h3>
+                                                <p className="track-artist">{track.uploader}</p>
+                                                <div className="track-actions">
+                                                    <button className="track-btn track-btn-play" onClick={() => playTrack(track)}>
+                                                        ▶ Play
+                                                    </button>
+                                                    <button className="track-btn track-btn-queue" onClick={() => addToQueue(track)}>
+                                                        + Queue
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : searchQuery && !isSearching ? (
+                                <div className="empty-state">
+                                    <div className="empty-icon">🎵</div>
+                                    <p>No results found</p>
+                                </div>
+                            ) : !searchQuery ? (
+                                <div className="empty-state">
+                                    <div className="empty-icon">🔍</div>
+                                    <p>Search for your favorite music</p>
+                                </div>
+                            ) : null}
+                        </div>
+                    </div>
+                )}
+
+                {/* Queue View */}
+                {activeView === 'queue' && (
+                    <div className="content-section">
+                        <div className="queue-header">
+                            <h2>Up Next</h2>
+                            <span className="queue-count">{queue.length} tracks</span>
+                        </div>
+
+                        {queue.length > 0 ? (
+                            <div className="queue-list">
+                                {queue.map((track, index) => (
+                                    <div key={`${track.videoId}-${index}`} className="queue-track">
+                                        <div className="queue-track-number">{index + 1}</div>
+                                        <img src={track.thumbnail} alt={track.title} className="queue-track-thumb" />
+                                        <div className="queue-track-info">
+                                            <div className="queue-track-title">{track.title}</div>
+                                            <div className="queue-track-artist">{track.uploader}</div>
+                                        </div>
+                                        <div className="queue-track-actions">
+                                            <button className="queue-btn" onClick={() => playFromQueue(index)}>▶</button>
+                                            <button className="queue-btn" onClick={() => removeFromQueue(index)}>✕</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="empty-state">
+                                <div className="empty-icon">📋</div>
+                                <p>Your queue is empty</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </main>
+
+            {/* Bottom Player */}
+            {currentTrack && (
+                <div className="bottom-player">
+                    <div className="player-track-info">
+                        <img src={currentTrack.thumbnail} alt={currentTrack.title} className="player-art" />
+                        <div className="player-details">
+                            <div className="player-title">{currentTrack.title}</div>
+                            <div className="player-artist">{currentTrack.uploader}</div>
+                        </div>
+                    </div>
+
+                    <div className="player-center">
+                        <div className="player-controls">
+                            <button className={`control-btn ${shuffle ? 'active' : ''}`} onClick={() => setShuffle(!shuffle)}>
+                                🔀
+                            </button>
+                            <button className="control-btn" onClick={playNext} disabled={queue.length === 0}>
+                                ⏮
+                            </button>
+                            <button className="control-btn control-btn-play" onClick={togglePlayPause}>
+                                {isPlaying ? '⏸' : '▶'}
+                            </button>
+                            <button className="control-btn" onClick={playNext} disabled={queue.length === 0}>
+                                ⏭
+                            </button>
+                            <button className={`control-btn ${repeat ? 'active' : ''}`} onClick={() => setRepeat(!repeat)}>
+                                🔁
+                            </button>
+                        </div>
+
+                        <div className="player-progress-container">
+                            <span className="progress-time">{formatTime(currentTime)}</span>
+                            <div
+                                className="player-progress-bar"
+                                onClick={handleProgressClick}
+                                onMouseMove={handleProgressDrag}
+                            >
+                                <div className="player-progress-fill" style={{ width: `${(currentTime / duration) * 100}%` }}></div>
+                            </div>
+                            <span className="progress-time">{formatTime(duration)}</span>
+                        </div>
+                    </div>
+
+                    <div className="player-volume">
+                        <button className="volume-btn" onClick={() => setIsMuted(!isMuted)}>
+                            {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+                        </button>
+                        <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={volume}
+                            onChange={(e) => setVolume(parseFloat(e.target.value))}
+                            className="volume-slider"
+                        />
+                    </div>
+                </div>
+            )}
+
+            <audio ref={audioRef} preload="metadata" />
+        </div>
+    );
+}
+
+export default App;

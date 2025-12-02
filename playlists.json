@@ -1,0 +1,41 @@
+[
+  {
+    "id": "7a946350-9d9d-4b67-ab04-cc0b7dae9f07",
+    "name": "best",
+    "tracks": [
+      {
+        "videoId": "vR16Gu-Uq00",
+        "title": "KR$NA - Joota Japani | Official Music Video",
+        "uploader": "KRSNA",
+        "thumbnail": "https://i.ytimg.com/vi/vR16Gu-Uq00/hqdefault.jpg",
+        "duration": 160,
+        "url": "https://www.youtube.com/watch?v=vR16Gu-Uq00"
+      },
+      {
+        "videoId": "we3Tj42dlhk",
+        "title": "KR$NA - Who You Are Ft. Aitch | Prod. Lejja | Official Music Video",
+        "uploader": "KRSNA",
+        "thumbnail": "https://i.ytimg.com/vi/we3Tj42dlhk/hqdefault.jpg",
+        "duration": 171,
+        "url": "https://www.youtube.com/watch?v=we3Tj42dlhk"
+      },
+      {
+        "videoId": "56WBK4ZK_cw",
+        "title": "benny blanco, Halsey & Khalid – Eastside (official video)",
+        "uploader": "benny blanco",
+        "thumbnail": "https://i.ytimg.com/vi/56WBK4ZK_cw/hqdefault.jpg",
+        "duration": 175,
+        "url": "https://www.youtube.com/watch?v=56WBK4ZK_cw"
+      },
+      {
+        "videoId": "2ub5lOODSD4",
+        "title": "Loe Shimmy & Don Toliver - 3am (Official Music Video)",
+        "uploader": "Loe Shimmy",
+        "thumbnail": "https://i.ytimg.com/vi/2ub5lOODSD4/hqdefault.jpg",
+        "duration": 191,
+        "url": "https://www.youtube.com/watch?v=2ub5lOODSD4"
+      }
+    ],
+    "createdAt": "2025-11-24T05:20:51.318Z"
+  }
+]

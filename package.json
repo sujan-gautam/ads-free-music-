@@ -1,0 +1,112 @@
+{
+  "name": "youtube-music-streamer",
+  "productName": "Music Player",
+  "version": "1.0.0",
+  "description": "Ad-free YouTube music streaming desktop application",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3001 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "cd client && npm run build && cd .. && electron-builder",
+    "package:win": "npm run electron:build -- --win",
+    "package:mac": "npm run electron:build -- --mac",
+    "package:linux": "npm run electron:build -- --linux"
+  },
+  "keywords": [
+    "youtube",
+    "music",
+    "streaming",
+    "yt-dlp",
+    "electron",
+    "desktop"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "ytdl-core": "^4.11.5",
+    "ytmusic-api": "^5.3.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.3",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^9.0.3"
+  },
+  "build": {
+    "appId": "com.musicplayer.app",
+    "productName": "Music Player",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron-main.js",
+      "electron-preload.js",
+      "server.js",
+      "verify_playlists.js",
+      "client/dist/**/*",
+      "node_modules/**/*",
+      "bin/**/*",
+      "yt-dlp.exe",
+      "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "favorites.json",
+        "to": "favorites.json",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "playlists.json",
+        "to": "playlists.json",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "play-history.json",
+        "to": "play-history.json",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "sign": null
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.music"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Audio"
+    }
+  }
+}
